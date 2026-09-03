@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Projeção financeira | Iury Almeida</title>
+  <style>
+    :root{
+      --ink:#102f36;--teal:#0d4650;--teal-2:#14616a;--green:#0a8f6a;--green-soft:#dff4eb;
+      --red:#c64f42;--red-soft:#fae8e5;--paper:#f3f7f6;--panel:#fff;--line:#d8e4e2;
+      --muted:#647a7e;--gold:#e5b84d;--shadow:0 14px 40px rgba(16,47,54,.08);--radius:18px
+    }
+    *{box-sizing:border-box}
+    html{background:var(--paper)}
+    body{margin:0;color:var(--ink);background:var(--paper);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    :focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+    
+    .topbar{background:var(--ink);color:#eef7f5;padding:18px clamp(18px,4vw,62px);display:flex;align-items:center;justify-content:space-between;gap:18px}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:750;letter-spacing:.01em}
+    .brand-mark{width:30px;height:30px;border:2px solid var(--green);border-radius:50%;display:grid;place-items:center;color:#8de0bd;font-family:Georgia,serif;font-size:19px}
+    .topbar .period{font-size:12px;color:#bad0ce;display:flex;align-items:center;gap:12px}
+    .cloud-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);padding:4px 10px;border-radius:99px;font-size:11px;color:#bad0ce;transition:all .3s}
+    .cloud-dot{width:7px;height:7px;border-radius:50%;background:#70d8a8;box-shadow:0 0 0 3px rgba(112,216,168,.2)}
+    .cloud-pill.syncing .cloud-dot{background:#e5b84d;box-shadow:0 0 0 3px rgba(229,184,77,.2);animation:pulse 1s infinite}
+    @keyframes pulse{0%{opacity:.4}50%{opacity:1}100%{opacity:.4}}
+
+    main{max-width:1360px;margin:auto;padding:clamp(24px,4vw,56px) clamp(18px,4vw,50px) 72px}
+    .intro{display:flex;justify-content:space-between;align-items:end;gap:20px;margin:0 0 28px}
+    .intro-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .eyebrow{margin:0 0 7px;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--teal-2)}
+    h1,h2{font-family:Georgia,"Times New Roman",serif}
+    h1{margin:0;font-size:clamp(30px,4vw,52px);line-height:1.03;letter-spacing:-.04em}
+    h1 em{font-style:normal;color:var(--green)}
+    .intro p{margin:9px 0 0;color:var(--muted);max-width:570px}
+    
+    .btn{border-radius:10px;padding:9px 16px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;transition:all .15s}
+    .btn-primary{border:0;background:var(--green);color:#fff}
+    .btn-primary:hover{background:#087456;transform:translateY(-1px);box-shadow:0 4px 12px rgba(10,143,106,.25)}
+    .btn-secondary{border:1px solid #a9bfbd;background:transparent;color:var(--teal)}
+    .btn-secondary:hover{background:#e4efed}
+    
+    .cash-panel{position:relative;overflow:hidden;background:var(--teal);color:#fff;border-radius:var(--radius);padding:clamp(22px,3.5vw,42px);box-shadow:var(--shadow);min-height:238px;display:flex;flex-direction:column;justify-content:space-between}
+    .cash-panel:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent 36px,rgba(255,255,255,.06) 37px),linear-gradient(105deg,transparent 54%,rgba(255,255,255,.09) 54.1%,transparent 64%);pointer-events:none}
+    .cash-panel>*{position:relative;z-index:1}
+    .cash-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;text-transform:uppercase;font-size:11px;letter-spacing:.13em;font-weight:800;color:#aed4ce}
+    .cash-status{display:inline-flex;align-items:center;gap:7px}
+    .cash-status:before{content:"";display:block;width:8px;height:8px;border-radius:50%;background:#70d8a8;box-shadow:0 0 0 5px rgba(112,216,168,.13)}
+    .cash-value{font:clamp(44px,7vw,86px)/1 Georgia,"Times New Roman",serif;letter-spacing:-.065em;margin:16px 0 4px}
+    .cash-caption{color:#c9e2de}
+    .cash-footer{display:flex;gap:26px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.18);padding-top:16px;color:#c9e2de;font-size:12px}
+    .cash-footer strong{color:#fff;margin-left:6px;font-size:13px}
+    
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:17px 0 34px}
+    .metric{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:18px 19px;min-height:124px}
+    .metric-label{color:var(--muted);font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.08em}
+    .metric-value{font:700 clamp(25px,2.3vw,34px)/1.1 Georgia,"Times New Roman",serif;letter-spacing:-.035em;margin:17px 0 5px}
+    .metric-note{font-size:12px;color:var(--muted)}
+    .metric.income .metric-value{color:var(--green)}
+    .metric.expense .metric-value{color:var(--red)}
+    
+    .filters{background:#e6efed;border:1px solid var(--line);border-radius:15px;padding:14px;display:grid;grid-template-columns:1.15fr 1fr 1fr 1.35fr auto auto;gap:10px;align-items:end;margin-bottom:26px}
+    .field{display:grid;gap:5px}
+    .field label{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:800}
+    .field select,.field input{height:39px;border:1px solid #b8ccca;border-radius:9px;background:#fff;padding:0 10px;color:var(--ink);min-width:0}
+    .reset,.restore{height:39px;border-radius:9px;padding:0 15px;font-weight:750;white-space:nowrap}
+    .reset{border:0;background:var(--teal);color:#fff}
+    .reset:hover{background:var(--teal-2)}
+    .restore{border:1px solid #9eb6b3;background:#fff;color:var(--teal)}
+    .restore:hover{background:#f5faf9}
+    
+    .grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.85fr);gap:20px;margin-bottom:26px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(18px,2.5vw,26px);box-shadow:0 5px 22px rgba(16,47,54,.035)}
+    .panel-head{display:flex;align-items:start;justify-content:space-between;gap:14px;margin-bottom:20px}
+    .panel h2{font-size:23px;line-height:1.15;letter-spacing:-.025em;margin:0}
+    .panel-subtitle{margin:5px 0 0;font-size:12px;color:var(--muted)}
+    .legend{display:flex;gap:11px;flex-wrap:wrap;color:var(--muted);font-size:11px}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+    .dot.income{background:var(--green)}
+    .dot.expense{background:var(--red)}
+    .chart{width:100%;display:block;overflow:visible}
+    .chart text{font-family:Inter,ui-sans-serif,system-ui,sans-serif;fill:#6d8385;font-size:12px}
+    .chart .axis{stroke:#dbe6e4;stroke-width:1}
+    .chart .value{fill:#415d61;font-size:11px;font-weight:700}
+    .empty-chart{height:210px;display:grid;place-items:center;color:var(--muted);font-size:13px}
+    .category-list{display:grid;gap:14px}
+    .category-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(80px,2fr) auto;gap:10px;align-items:center}
+    .category-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .bar-track{height:9px;border-radius:50px;background:#e6efed;overflow:hidden}
+    .bar-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--teal-2),var(--green))}
+    .category-value{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+    
+    .table-panel{padding:0;overflow:hidden}
+    .table-head{padding:23px 25px 16px;display:flex;justify-content:space-between;align-items:start;gap:16px}
+    .table-head h2{margin:0;font-size:24px}
+    .result-count{font-size:12px;color:var(--muted);white-space:nowrap;padding-top:5px}
+    .table-scroll{overflow:auto;border-top:1px solid var(--line)}
+    table{border-collapse:collapse;width:100%;min-width:780px;text-align:left}
+    th,td{padding:13px 25px;border-bottom:1px solid #e9f0ef;vertical-align:middle}
+    th{background:#fbfcfc;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+    th button{appearance:none;border:0;background:transparent;padding:0;color:inherit;font:inherit;font-weight:800;text-transform:inherit;letter-spacing:inherit}
+    th button:hover{color:var(--teal)}
+    td{font-size:13px}
+    .description{font-weight:750;color:#183d43}
+    .date,.status{color:var(--muted);font-size:12px}
+    .status-control{border:1px solid #c5d5d3;border-radius:7px;background:#fff;color:var(--ink);font-size:12px;padding:5px 24px 5px 7px}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .type{display:inline-flex;align-items:center;gap:6px;padding:3px 7px;border-radius:99px;font-weight:800;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+    .type.income{color:#087456;background:var(--green-soft)}
+    .type.expense{color:#a03c32;background:var(--red-soft)}
+    .value{font-variant-numeric:tabular-nums;text-align:right;font-weight:800;white-space:nowrap}
+    .value.income{color:var(--green)}
+    .value.expense{color:var(--red)}
+    .action-cell{text-align:right;width:40px;padding-right:15px}
+    .btn-delete{appearance:none;border:0;background:transparent;color:#9eb6b3;border-radius:6px;padding:4px 8px;font-size:14px;transition:all .15s}
+    .btn-delete:hover{color:var(--red);background:var(--red-soft)}
+    .no-results{text-align:center;color:var(--muted);padding:32px}
+    .footer-note{margin:16px 2px 0;color:var(--muted);font-size:12px}
+    .footer-note strong{color:var(--teal)}
+
+    /* Modal Novo Lançamento */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(16,47,54,.45);backdrop-filter:blur(3px);
+      display:grid;place-items:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s ease;
+      padding:20px
+    }
+    .modal-backdrop.open{opacity:1;pointer-events:auto}
+    .modal-card{
+      background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(16,47,54,.2);
+      width:100%;max-width:480px;padding:30px;transform:translateY(12px);transition:transform .2s ease
+    }
+    .modal-backdrop.open .modal-card{transform:translateY(0)}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+    .modal-header h3{margin:0;font-size:22px;font-family:Georgia,serif;color:var(--ink)}
+    .btn-close{border:0;background:transparent;font-size:22px;color:var(--muted);line-height:1}
+    .btn-close:hover{color:var(--ink)}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+    .form-group input,.form-group select{
+      width:100%;height:42px;border:1px solid #b8ccca;border-radius:10px;padding:0 12px;font-size:14px;color:var(--ink)
+    }
+    .form-group input:focus,.form-group select:focus{border-color:var(--teal);outline:none}
+    .type-switcher{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#e6efed;padding:4px;border-radius:11px;margin-bottom:18px}
+    .type-btn{border:0;background:transparent;padding:9px;border-radius:8px;font-weight:750;font-size:13px;color:var(--muted);transition:all .15s}
+    .type-btn.active.expense{background:var(--red);color:#fff}
+    .type-btn.active.income{background:var(--green);color:#fff}
+    .modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+
+    @media(max-width:850px){
+      .filters{grid-template-columns:1fr 1fr}
+      .filters .field:last-of-type{grid-column:span 2}
+      .reset,.restore{grid-column:span 2}
+      .grid{grid-template-columns:1fr}
+      .metrics{grid-template-columns:1fr 1fr}
+      .intro{align-items:start;flex-direction:column}
+      .topbar .period{display:none}
+    }
+    @media(max-width:520px){
+      .metrics{grid-template-columns:1fr}
+      .filters{grid-template-columns:1fr}
+      .filters .field:last-of-type,.reset,.restore{grid-column:auto}
+      .cash-footer{gap:10px 18px}
+      .category-row{grid-template-columns:100px 1fr}
+      .category-value{grid-column:2}
+      .table-head{padding:19px}
+      .topbar{padding:15px 18px}
+    }
+    @media(prefers-reduced-motion:no-preference){
+      .panel,.metric,.cash-panel{transition:transform .2s ease,box-shadow .2s ease}
+      .panel:hover,.metric:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    }
+    @media print{
+      *{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+      body{background:#fff;font-size:11px}
+      .topbar{padding:10px 20px}
+      .print-button,.btn-primary,.filters,.modal-backdrop{display:none!important}
+      main{padding:22px 20px}
+      .intro{margin-bottom:15px}
+      h1{font-size:31px}
+      .cash-panel{min-height:140px;padding:20px;border-radius:8px}
+      .cash-value{font-size:48px}
+      .metrics{margin:12px 0 18px;gap:8px}
+      .metric{min-height:auto;padding:12px;border-radius:8px}
+      .metric-value{font-size:22px;margin:8px 0}
+      .grid{gap:12px;margin-bottom:14px}
+      .panel{padding:15px;border-radius:8px;box-shadow:none}
+      .table-panel{border-radius:8px}
+      .table-head{padding:15px}
+      .table-scroll{overflow:visible}
+      table{min-width:0}
+      th,td{padding:8px 10px}
+      .action-cell{display:none}
+      .footer-note{margin-top:10px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">$</span>Fluxo em ordem</div>
+    <div class="period">
+      <span>Iury Almeida · 2026</span>
+      <div id="cloudStatus" class="cloud-pill" title="Status de sincronização">
+        <span class="cloud-dot"></span>
+        <span id="cloudStatusText">Sincronizado</span>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Planejamento de caixa</p>
+        <h1 id="page-title">Cada lançamento,<br><em>uma decisão mais clara.</em></h1>
+        <p>Visão consolidada das movimentações com sincronização em nuvem e persistência automática.</p>
+      </div>
+      <div class="intro-actions">
+        <button id="btnOpenModal" class="btn btn-primary" type="button">+ Novo Lançamento</button>
+        <button class="btn btn-secondary print-button" type="button" onclick="window.print()">Imprimir relatório</button>
+      </div>
+    </section>
+
+    <section class="cash-panel" aria-label="Resumo do saldo projetado">
+      <div class="cash-meta">
+        <span>Saldo projetado do período</span>
+        <span class="cash-status" id="cashSyncLabel">Conectado à nuvem</span>
+      </div>
+      <div>
+        <div id="heroBalance" class="cash-value">R$ 0,00</div>
+        <div id="heroCaption" class="cash-caption">Resultado considerando todas as movimentações.</div>
+      </div>
+      <div class="cash-footer">
+        <span>Receitas<strong id="heroIncome">R$ 0,00</strong></span>
+        <span>Despesas<strong id="heroExpense">R$ 0,00</strong></span>
+        <span>Lançamentos<strong id="heroCount">0</strong></span>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Indicadores financeiros">
+      <article class="metric income">
+        <div class="metric-label">Receitas</div>
+        <div id="incomeValue" class="metric-value">R$ 0,00</div>
+        <div class="metric-note">Dentro dos filtros atuais</div>
+      </article>
+      <article class="metric expense">
+        <div class="metric-label">Despesas</div>
+        <div id="expenseValue" class="metric-value">R$ 0,00</div>
+        <div class="metric-note">Dentro dos filtros atuais</div>
+      </article>
+      <article class="metric">
+        <div class="metric-label">Movimentações</div>
+        <div id="countValue" class="metric-value">0</div>
+        <div class="metric-note">Lançamentos encontrados</div>
+      </article>
+    </section>
+
+    <section class="filters" aria-label="Filtros e ações das movimentações">
+      <div class="field">
+        <label for="filtroMês">Mês</label>
+        <select id="filtroMês"><option value="">Todos os meses</option></select>
+      </div>
+      <div class="field">
+        <label for="filtroCategoria">Categoria</label>
+        <select id="filtroCategoria"><option value="">Todas as categorias</option></select>
+      </div>
+      <div class="field">
+        <label for="filtroSituação">Situação</label>
+        <select id="filtroSituação"><option value="">Todas as situações</option></select>
+      </div>
+      <div class="field">
+        <label for="busca">Pesquisar</label>
+        <input id="busca" type="search" placeholder="Ex.: aluguel, Spotify…" autocomplete="off">
+      </div>
+      <button id="reset" class="reset" type="button">Limpar filtros</button>
+      <button id="resetStatuses" class="restore" type="button">Restaurar situações</button>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Evolução mensal</h2>
+            <p class="panel-subtitle">Receitas e despesas previstas em cada mês.</p>
+          </div>
+          <div class="legend" aria-label="Legenda">
+            <span><i class="dot income"></i>Receitas</span>
+            <span><i class="dot expense"></i>Despesas</span>
+          </div>
+        </div>
+        <div id="monthlyChart" aria-live="polite"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Despesas por categoria</h2>
+            <p class="panel-subtitle">Participação no total filtrado.</p>
+          </div>
+        </div>
+        <div id="categoryChart" class="category-list" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section class="panel table-panel" aria-labelledby="transactions-title">
+      <div class="table-head">
+        <div>
+          <h2 id="transactions-title">Movimentações</h2>
+          <p class="panel-subtitle">Clique no cabeçalho para ordenar a lista.</p>
+        </div>
+        <div id="resultCount" class="result-count" aria-live="polite">0 lançamentos</div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th><button type="button" data-sort="date">Data ↕</button></th>
+              <th>Tipo</th>
+              <th><button type="button" data-sort="description">Descrição ↕</button></th>
+              <th><button type="button" data-sort="category">Categoria ↕</button></th>
+              <th><button type="button" data-sort="status">Situação ↕</button></th>
+              <th><button type="button" data-sort="amount">Valor ↕</button></th>
+              <th class="action-cell"></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="footer-note"><strong>Persistência:</strong> Sincronizado automaticamente com a nuvem · Valores em BRL.</p>
+  </main>
+
+  <!-- Modal Novo Lançamento -->
+  <div id="modalNewTx" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h3 id="modalTitle">Novo Lançamento</h3>
+        <button id="btnCloseModal" class="btn-close" type="button" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="formNewTx">
+        <div class="type-switcher">
+          <button type="button" id="btnTypeExpense" class="type-btn active expense">Despesa (-)</button>
+          <button type="button" id="btnTypeIncome" class="type-btn income">Receita (+)</button>
+        </div>
+        <div class="form-group">
+          <label for="txDesc">Descrição</label>
+          <input type="text" id="txDesc" required placeholder="Ex.: Supermercado, Salário, Internet" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="txAmount">Valor (R$)</label>
+          <input type="number" id="txAmount" required step="0.01" min="0.01" placeholder="0,00">
+        </div>
+        <div class="form-group">
+          <label for="txDate">Data</label>
+          <input type="date" id="txDate" required>
+        </div>
+        <div class="form-group">
+          <label for="txCategory">Categoria</label>
+          <input type="text" id="txCategory" list="categoriesList" required placeholder="Selecione ou digite...">
+          <datalist id="categoriesList">
+            <option value="Salário">
+            <option value="Casa">
+            <option value="Família e filhos">
+            <option value="Compras">
+            <option value="Assinaturas e serviços">
+            <option value="Dívidas e empréstimos">
+            <option value="Cuidados pessoais">
+            <option value="Alimentação">
+            <option value="Transporte">
+            <option value="Outros">
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label for="txStatus">Situação</label>
+          <select id="txStatus">
+            <option value="Não pago" selected>Não pago</option>
+            <option value="Pago">Pago</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btnCancelModal" class="btn btn-secondary">Cancelar</button>
+          <button type="submit" id="btnSaveTx" class="btn btn-primary">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  const defaultTransactions = [
+    {"id":"2026-09-01|Aluguel|-2000|0","date":"2026-09-01","description":"Aluguel","category":"Casa","amount":-2000,"status":"Não pago"},
+    {"id":"2026-09-01|Pensão|-2000|1","date":"2026-09-01","description":"Pensão","category":"Família e filhos","amount":-2000,"status":"Não pago"},
+    {"id":"2026-09-01|Caução 3/3|-500|2","date":"2026-09-01","description":"Caução 3/3","category":"Casa","amount":-500,"status":"Não pago"},
+    {"id":"2026-09-01|STZ | Igor 2/2|-94.22|3","date":"2026-09-01","description":"STZ | Igor 2/2","category":"Compras","amount":-94.22,"status":"Não pago"},
+    {"id":"2026-09-01|Igor | CODEX|-100|4","date":"2026-09-01","description":"Igor | CODEX","category":"Assinaturas e serviços","amount":-100,"status":"Não pago"},
+    {"id":"2026-09-01|Igor | Foto 2/2|-110|5","date":"2026-09-01","description":"Igor | Foto 2/2","category":"Compras","amount":-110,"status":"Não pago"},
+    {"id":"2026-09-01|Igor | Magazine|-74|6","date":"2026-09-01","description":"Igor | Magazine","category":"Dívidas e empréstimos","amount":-74,"status":"Não pago"},
+    {"id":"2026-09-01|Igor | Cortina|-43.96|7","date":"2026-09-01","description":"Igor | Cortina","category":"Casa","amount":-43.96,"status":"Não pago"},
+    {"id":"2026-09-01|Renda|14394.26|8","date":"2026-09-01","description":"Renda","category":"Salário","amount":14394.26,"status":"Não pago"},
+    {"id":"2026-09-03|Boticario 2/3|-108.66|9","date":"2026-09-03","description":"Boticario 2/3","category":"Cuidados pessoais","amount":-108.66,"status":"Não pago"},
+    {"id":"2026-09-07|Internet|-20|10","date":"2026-09-07","description":"Internet","category":"Assinaturas e serviços","amount":-20,"status":"Não pago"},
+    {"id":"2026-09-07|Spotify|-12.9|11","date":"2026-09-07","description":"Spotify","category":"Assinaturas e serviços","amount":-12.9,"status":"Não pago"},
+    {"id":"2026-09-08|Merli+|-19.99|12","date":"2026-09-08","description":"Merli+","category":"Assinaturas e serviços","amount":-19.99,"status":"Não pago"},
+    {"id":"2026-09-10|TV 55 Samsung 3/9|-259.9|13","date":"2026-09-10","description":"TV 55 Samsung 3/9","category":"Compras","amount":-259.9,"status":"Não pago"},
+    {"id":"2026-09-10|Beatriz | Perfume 2/2|-122.77|14","date":"2026-09-10","description":"Beatriz | Perfume 2/2","category":"Compras","amount":-122.77,"status":"Não pago"},
+    {"id":"2026-09-11|Prime Video|-9.99|15","date":"2026-09-11","description":"Prime Video","category":"Assinaturas e serviços","amount":-9.99,"status":"Não pago"},
+    {"id":"2026-09-15|Liquidificador 3/4|-34|16","date":"2026-09-15","description":"Liquidificador 3/4","category":"Compras","amount":-34,"status":"Não pago"},
+    {"id":"2026-09-15|Organizze|-35|17","date":"2026-09-15","description":"Organizze","category":"Assinaturas e serviços","amount":-35,"status":"Não pago"},
+    {"id":"2026-09-15|Academia|-149.9|18","date":"2026-09-15","description":"Academia","category":"Cuidados pessoais","amount":-149.9,"status":"Não pago"},
+    {"id":"2026-10-01|Aluguel|-2000|19","date":"2026-10-01","description":"Aluguel","category":"Casa","amount":-2000,"status":"Não pago"},
+    {"id":"2026-10-01|Pensão|-2000|20","date":"2026-10-01","description":"Pensão","category":"Família e filhos","amount":-2000,"status":"Não pago"},
+    {"id":"2026-10-01|Igor | CODEX|-100|21","date":"2026-10-01","description":"Igor | CODEX","category":"Assinaturas e serviços","amount":-100,"status":"Não pago"},
+    {"id":"2026-10-03|Boticario 3/3|-108.66|22","date":"2026-10-03","description":"Boticario 3/3","category":"Cuidados pessoais","amount":-108.66,"status":"Não pago"},
+    {"id":"2026-10-07|Internet|-20|23","date":"2026-10-07","description":"Internet","category":"Assinaturas e serviços","amount":-20,"status":"Não pago"},
+    {"id":"2026-10-07|Spotify|-12.9|24","date":"2026-10-07","description":"Spotify","category":"Assinaturas e serviços","amount":-12.9,"status":"Não pago"},
+    {"id":"2026-10-08|Merli+|-19.99|25","date":"2026-10-08","description":"Merli+","category":"Assinaturas e serviços","amount":-19.99,"status":"Não pago"},
+    {"id":"2026-10-10|TV 55 Samsung 4/9|-259.9|26","date":"2026-10-10","description":"TV 55 Samsung 4/9","category":"Compras","amount":-259.9,"status":"Não pago"},
+    {"id":"2026-10-11|Prime Video|-9.99|27","date":"2026-10-11","description":"Prime Video","category":"Assinaturas e serviços","amount":-9.99,"status":"Não pago"},
+    {"id":"2026-10-15|Liquidificador 4/4|-34|28","date":"2026-10-15","description":"Liquidificador 4/4","category":"Compras","amount":-34,"status":"Não pago"},
+    {"id":"2026-10-15|Organizze|-35|29","date":"2026-10-15","description":"Organizze","category":"Assinaturas e serviços","amount":-35,"status":"Não pago"},
+    {"id":"2026-10-15|Academia|-149.9|30","date":"2026-10-15","description":"Academia","category":"Cuidados pessoais","amount":-149.9,"status":"Não pago"},
+    {"id":"2026-11-01|Aluguel|-2000|31","date":"2026-11-01","description":"Aluguel","category":"Casa","amount":-2000,"status":"Não pago"},
+    {"id":"2026-11-01|Pensão|-2000|32","date":"2026-11-01","description":"Pensão","category":"Família e filhos","amount":-2000,"status":"Não pago"},
+    {"id":"2026-11-01|Igor | CODEX|-100|33","date":"2026-11-01","description":"Igor | CODEX","category":"Assinaturas e serviços","amount":-100,"status":"Não pago"},
+    {"id":"2026-11-07|Internet|-20|34","date":"2026-11-07","description":"Internet","category":"Assinaturas e serviços","amount":-20,"status":"Não pago"},
+    {"id":"2026-11-07|Spotify|-12.9|35","date":"2026-11-07","description":"Spotify","category":"Assinaturas e serviços","amount":-12.9,"status":"Não pago"},
+    {"id":"2026-11-08|Merli+|-19.99|36","date":"2026-11-08","description":"Merli+","category":"Assinaturas e serviços","amount":-19.99,"status":"Não pago"},
+    {"id":"2026-11-10|TV 55 Samsung 5/9|-259.9|37","date":"2026-11-10","description":"TV 55 Samsung 5/9","category":"Compras","amount":-259.9,"status":"Não pago"},
+    {"id":"2026-11-11|Prime Video|-9.99|38","date":"2026-11-11","description":"Prime Video","category":"Assinaturas e serviços","amount":-9.99,"status":"Não pago"},
+    {"id":"2026-11-15|Organizze|-35|39","date":"2026-11-15","description":"Organizze","category":"Assinaturas e serviços","amount":-35,"status":"Não pago"},
+    {"id":"2026-11-15|Academia|-149.9|40","date":"2026-11-15","description":"Academia","category":"Cuidados pessoais","amount":-149.9,"status":"Não pago"},
+    {"id":"2026-12-01|Aluguel|-2000|41","date":"2026-12-01","description":"Aluguel","category":"Casa","amount":-2000,"status":"Não pago"},
+    {"id":"2026-12-01|Pensão|-2000|42","date":"2026-12-01","description":"Pensão","category":"Família e filhos","amount":-2000,"status":"Não pago"},
+    {"id":"2026-12-01|Igor | CODEX|-100|43","date":"2026-12-01","description":"Igor | CODEX","category":"Assinaturas e serviços","amount":-100,"status":"Não pago"},
+    {"id":"2026-12-07|Internet|-20|44","date":"2026-12-07","description":"Internet","category":"Assinaturas e serviços","amount":-20,"status":"Não pago"},
+    {"id":"2026-12-07|Spotify|-12.9|45","date":"2026-12-07","description":"Spotify","category":"Assinaturas e serviços","amount":-12.9,"status":"Não pago"},
+    {"id":"2026-12-08|Merli+|-19.99|46","date":"2026-12-08","description":"Merli+","category":"Assinaturas e serviços","amount":-19.99,"status":"Não pago"},
+    {"id":"2026-12-10|TV 55 Samsung 6/9|-259.9|47","date":"2026-12-10","description":"TV 55 Samsung 6/9","category":"Compras","amount":-259.9,"status":"Não pago"},
+    {"id":"2026-12-11|Prime Video|-9.99|48","date":"2026-12-11","description":"Prime Video","category":"Assinaturas e serviços","amount":-9.99,"status":"Não pago"},
+    {"id":"2026-12-15|Organizze|-35|49","date":"2026-12-15","description":"Organizze","category":"Assinaturas e serviços","amount":-35,"status":"Não pago"},
+    {"id":"2026-12-15|Academia|-149.9|50","date":"2026-12-15","description":"Academia","category":"Cuidados pessoais","amount":-149.9,"status":"Não pago"}
+  ];
+
+  const localCacheKey = "iury-almeida-dashboard-cache-v2";
+  const allowedStatuses = ["Pago", "Não pago"];
+  let transactions = [];
+
+  // Load local cache immediately for zero-delay display
+  try {
+    const cached = localStorage.getItem(localCacheKey);
+    transactions = cached ? JSON.parse(cached) : [...defaultTransactions];
+  } catch (e) {
+    transactions = [...defaultTransactions];
+  }
+
+  const monthNames = {"01":"Janeiro","02":"Fevereiro","03":"Março","04":"Abril","05":"Maio","06":"Junho","07":"Julho","08":"Agosto","09":"Setembro","10":"Outubro","11":"Novembro","12":"Dezembro"};
+  const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  const state = { sort: "date", direction: 1 };
+  let currentTxType = "expense";
+
+  const $ = id => document.getElementById(id);
+  const escapeHtml = value => String(value).replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"})[char]);
+  const sum = (items, fn) => items.reduce((total, item) => total + fn(item), 0);
+  const monthKey = item => item.date ? item.date.slice(0, 7) : "";
+  function labelMonth(key) {
+    if (!key || key.length < 7) return key;
+    return (monthNames[key.slice(5)] || key.slice(5)) + ' ' + key.slice(2, 4);
+  }
+
+  function setSyncStatus(stateText, isSyncing = false) {
+    const pill = $("cloudStatus");
+    const label = $("cloudStatusText");
+    if (!pill || !label) return;
+    label.textContent = stateText;
+    if (isSyncing) pill.classList.add("syncing");
+    else pill.classList.remove("syncing");
+  }
+
+  function saveLocalCache() {
+    try {
+      localStorage.setItem(localCacheKey, JSON.stringify(transactions));
+    } catch (e) {}
+  }
+
+  // Fetch from serverless API and sync
+  async function fetchFromCloud() {
+    setSyncStatus("Sincronizando...", true);
+    try {
+      const res = await fetch("/api/transactions");
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.transactions) && data.transactions.length > 0) {
+          transactions = data.transactions;
+          saveLocalCache();
+          populateFilters();
+          render();
+          setSyncStatus("Sincronizado");
+          $("cashSyncLabel").textContent = "Nuvem atualizada";
+          return;
+        }
+      }
+      setSyncStatus("Conectado");
+    } catch (err) {
+      console.warn("Offline ou erro na API:", err);
+      setSyncStatus("Modo offline");
+    }
+  }
+
+  // Post changes to serverless API
+  async function postAction(payload) {
+    setSyncStatus("Salvando...", true);
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.transactions)) {
+          transactions = data.transactions;
+          saveLocalCache();
+          populateFilters();
+          render();
+        }
+        setSyncStatus("Sincronizado");
+      } else {
+        setSyncStatus("Erro ao salvar");
+      }
+    } catch (err) {
+      console.error("Falha ao sincronizar com nuvem:", err);
+      setSyncStatus("Salvo localmente");
+    }
+  }
+
+  function populateFilters() {
+    const monthSelect = $("filtroMês");
+    const currentMonth = monthSelect.value;
+    const catSelect = $("filtroCategoria");
+    const currentCat = catSelect.value;
+
+    const months = [...new Set(transactions.map(monthKey))].filter(Boolean).sort();
+    monthSelect.innerHTML = '<option value="">Todos os meses</option>';
+    months.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = labelMonth(m);
+      if (m === currentMonth) opt.selected = true;
+      monthSelect.appendChild(opt);
+    });
+
+    const categories = [...new Set(transactions.map(t => t.category))].filter(Boolean).sort();
+    catSelect.innerHTML = '<option value="">Todas as categorias</option>';
+    categories.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c;
+      opt.textContent = c;
+      if (c === currentCat) opt.selected = true;
+      catSelect.appendChild(opt);
+    });
+
+    const sitSelect = $("filtroSituação");
+    if (sitSelect.options.length <= 1) {
+      allowedStatuses.forEach(s => {
+        sitSelect.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`);
+      });
+    }
+  }
+
+  function filteredTransactions() {
+    const month = $("filtroMês").value;
+    const category = $("filtroCategoria").value;
+    const status = $("filtroSituação").value;
+    const query = $("busca").value.trim().toLocaleLowerCase("pt-BR");
+
+    return transactions.filter(t => {
+      return (!month || monthKey(t) === month) &&
+             (!category || t.category === category) &&
+             (!status || t.status === status) &&
+             (!query || [t.description, t.category, t.status].join(" ").toLocaleLowerCase("pt-BR").includes(query));
+    });
+  }
+
+  function sorted(items) {
+    const factor = state.direction;
+    return [...items].sort((a, b) => {
+      let left = a[state.sort], right = b[state.sort];
+      if (typeof left === "string") {
+        return left.localeCompare(right, "pt-BR") * factor;
+      }
+      return (left - right) * factor;
+    });
+  }
+
+  function renderMetrics(items) {
+    const income = sum(items, t => Math.max(t.amount, 0));
+    const expense = Math.abs(sum(items, t => Math.min(t.amount, 0)));
+    const balance = income - expense;
+    const paid = items.filter(t => t.status === "Pago").length;
+    const unpaid = items.length - paid;
+    const scope = items.length === transactions.length ? "no período completo." : "nos filtros ativos.";
+
+    $("heroBalance").textContent = money.format(balance);
+    $("heroCaption").textContent = `${paid} pago${paid === 1 ? "" : "s"} · ${unpaid} não pago${unpaid === 1 ? "" : "s"} ${scope}`;
+    $("heroIncome").textContent = money.format(income);
+    $("heroExpense").textContent = money.format(expense);
+    $("heroCount").textContent = items.length;
+    $("incomeValue").textContent = money.format(income);
+    $("expenseValue").textContent = money.format(expense);
+    $("countValue").textContent = items.length;
+  }
+
+  function renderMonthly(items) {
+    const months = [...new Set(transactions.map(monthKey))].filter(Boolean).sort();
+    if (months.length === 0) {
+      $("monthlyChart").innerHTML = '<div class="empty-chart">Sem movimentações para exibir gráfico.</div>';
+      return;
+    }
+    const data = months.map(key => ({
+      key,
+      income: sum(items.filter(t => monthKey(t) === key), t => Math.max(0, t.amount)),
+      expense: Math.abs(sum(items.filter(t => monthKey(t) === key), t => Math.min(0, t.amount)))
+    }));
+    const max = Math.max(1, ...data.flatMap(d => [d.income, d.expense]));
+    const w = 740, h = 238, base = 187, top = 18, scale = (base - top) / max, group = 740 / data.length;
+
+    let svg = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Evolução mensal"><line class="axis" x1="20" y1="${base}" x2="720" y2="${base}"/>`;
+    data.forEach((d, index) => {
+      const center = 20 + group * (index + .5);
+      const incomeH = d.income * scale;
+      const expenseH = d.expense * scale;
+      svg += `<rect x="${center - 37}" y="${base - incomeH}" width="29" height="${incomeH}" rx="5" fill="#0a8f6a"><title>${labelMonth(d.key)}: receitas ${money.format(d.income)}</title></rect>`;
+      svg += `<rect x="${center + 8}" y="${base - expenseH}" width="29" height="${expenseH}" rx="5" fill="#c64f42"><title>${labelMonth(d.key)}: despesas ${money.format(d.expense)}</title></rect>`;
+      svg += `<text x="${center}" y="215" text-anchor="middle">${labelMonth(d.key)}</text>`;
+    });
+    svg += `<text class="value" x="22" y="13">escala: ${money.format(max)}</text></svg>`;
+    $("monthlyChart").innerHTML = svg;
+  }
+
+  function renderCategories(items) {
+    const totals = {};
+    items.filter(t => t.amount < 0).forEach(t => totals[t.category] = (totals[t.category] || 0) + Math.abs(t.amount));
+    const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    const max = entries[0]?.[1] || 0;
+
+    $("categoryChart").innerHTML = entries.length
+      ? entries.map(([category, value]) => `
+          <div class="category-row">
+            <div class="category-name" title="${escapeHtml(category)}">${escapeHtml(category)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(value / max) * 100}%"></div></div>
+            <div class="category-value">${money.format(value)}</div>
+          </div>
+        `).join("")
+      : '<div class="empty-chart">Nenhuma despesa encontrada com estes filtros.</div>';
+  }
+
+  function renderTable(items) {
+    const ordered = sorted(items);
+    $("resultCount").textContent = ordered.length === 1 ? "1 lançamento" : `${ordered.length} lançamentos`;
+
+    $("tableBody").innerHTML = ordered.length
+      ? ordered.map(t => {
+          const type = t.amount >= 0 ? "income" : "expense";
+          const typeLabel = t.amount >= 0 ? "Receita" : "Despesa";
+          const controlId = `status-${t.id}`;
+          const paid = t.status === "Pago";
+          let parsedDate = t.date;
+          try {
+            parsedDate = dateFormatter.format(new Date(t.date + "T12:00:00"));
+          } catch(e) {}
+
+          return `<tr>
+            <td class="date">${parsedDate}</td>
+            <td><span class="type ${type}">${typeLabel}</span></td>
+            <td class="description">${escapeHtml(t.description)}</td>
+            <td>${escapeHtml(t.category)}</td>
+            <td class="status">
+              <label class="sr-only" for="${escapeHtml(controlId)}">Situação</label>
+              <select id="${escapeHtml(controlId)}" class="status-control" data-status-id="${escapeHtml(t.id)}">
+                <option value="Pago"${paid ? " selected" : ""}>Pago</option>
+                <option value="Não pago"${paid ? "" : " selected"}>Não pago</option>
+              </select>
+            </td>
+            <td class="value ${type}">${money.format(t.amount)}</td>
+            <td class="action-cell">
+              <button type="button" class="btn-delete" data-delete-id="${escapeHtml(t.id)}" title="Excluir lançamento">✕</button>
+            </td>
+          </tr>`;
+        }).join("")
+      : '<tr><td class="no-results" colspan="7">Nenhuma movimentação corresponde aos filtros.</td></tr>';
+  }
+
+  function render() {
+    const items = filteredTransactions();
+    renderMetrics(items);
+    renderMonthly(items);
+    renderCategories(items);
+    renderTable(items);
+  }
+
+  function setTransactionStatus(id, status) {
+    if (!allowedStatuses.includes(status)) return;
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    tx.status = status;
+    saveLocalCache();
+    render();
+    postAction({ action: "update_status", id, status });
+  }
+
+  function deleteTransaction(id) {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    if (!confirm(`Deseja realmente excluir "${tx.description}"?`)) return;
+    transactions = transactions.filter(t => t.id !== id);
+    saveLocalCache();
+    populateFilters();
+    render();
+    postAction({ action: "delete_transaction", id });
+  }
+
+  // Modal controls
+  const modal = $("modalNewTx");
+  function openModal() {
+    $("txDate").value = new Date().toISOString().slice(0, 10);
+    modal.classList.add("open");
+    $("txDesc").focus();
+  }
+  function closeModal() {
+    modal.classList.remove("open");
+    $("formNewTx").reset();
+    setType("expense");
+  }
+  function setType(type) {
+    currentTxType = type;
+    if (type === "expense") {
+      $("btnTypeExpense").className = "type-btn active expense";
+      $("btnTypeIncome").className = "type-btn income";
+    } else {
+      $("btnTypeExpense").className = "type-btn expense";
+      $("btnTypeIncome").className = "type-btn active income";
+    }
+  }
+
+  $("btnOpenModal").addEventListener("click", openModal);
+  $("btnCloseModal").addEventListener("click", closeModal);
+  $("btnCancelModal").addEventListener("click", closeModal);
+  modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+
+  $("btnTypeExpense").addEventListener("click", () => setType("expense"));
+  $("btnTypeIncome").addEventListener("click", () => setType("income"));
+
+  $("formNewTx").addEventListener("submit", async e => {
+    e.preventDefault();
+    const desc = $("txDesc").value.trim();
+    let val = parseFloat($("txAmount").value);
+    const date = $("txDate").value;
+    const category = $("txCategory").value.trim() || "Outros";
+    const status = $("txStatus").value;
+
+    if (!desc || isNaN(val) || !date) return;
+    if (currentTxType === "expense") val = -Math.abs(val);
+    else val = Math.abs(val);
+
+    const newTx = {
+      id: `${date}|${desc}|${val}|${Date.now()}`,
+      date,
+      description: desc,
+      category,
+      amount: val,
+      status
+    };
+
+    transactions.push(newTx);
+    saveLocalCache();
+    populateFilters();
+    render();
+    closeModal();
+    await postAction({ action: "add_transaction", transaction: newTx });
+  });
+
+  // Event Listeners for Filters & Sorting
+  ["filtroMês", "filtroCategoria", "filtroSituação", "busca"].forEach(id => {
+    $(id).addEventListener(id === "busca" ? "input" : "change", render);
+  });
+
+  $("reset").addEventListener("click", () => {
+    ["filtroMês", "filtroCategoria", "filtroSituação", "busca"].forEach(id => $(id).value = "");
+    render();
+  });
+
+  $("resetStatuses").addEventListener("click", () => {
+    if (!confirm("Restaurar todas as situações para 'Não pago'?")) return;
+    transactions.forEach(t => t.status = "Não pago");
+    saveLocalCache();
+    render();
+    postAction({ action: "sync_all", transactions });
+  });
+
+  $("tableBody").addEventListener("change", event => {
+    const control = event.target;
+    if (control.matches(".status-control")) {
+      setTransactionStatus(control.dataset.statusId, control.value);
+    }
+  });
+
+  $("tableBody").addEventListener("click", event => {
+    const btn = event.target.closest(".btn-delete");
+    if (btn) {
+      deleteTransaction(btn.dataset.deleteId);
+    }
+  });
+
+  document.querySelectorAll("[data-sort]").forEach(button => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.sort;
+      state.direction = state.sort === key ? state.direction * -1 : 1;
+      state.sort = key;
+      document.querySelectorAll("[data-sort]").forEach(b => {
+        b.textContent = b.dataset.sort.charAt(0).toUpperCase() + b.dataset.sort.slice(1) + " ↕";
+      });
+      button.textContent = key.charAt(0).toUpperCase() + key.slice(1) + (state.direction === 1 ? " ↑" : " ↓");
+      render();
+    });
+  });
+
+  // Initialize
+  populateFilters();
+  render();
+  fetchFromCloud();
+  </script>
+</body>
+</html>
